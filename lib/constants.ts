@@ -43,7 +43,7 @@ export const VERTICALS: VerticalInfo[] = [
     blurb: 'Modern hypercars and concours classics',
     intro:
       'Low-mileage supercars and blue-chip classics from specialist dealers, with documented histories, refundable hold deposits and timed online auctions.',
-    image: unsplash('1783822841230-3c443072565e'),
+    image: unsplash('1777965758053-d6e0b6fef4ce'),
   },
   {
     slug: 'yachts',
