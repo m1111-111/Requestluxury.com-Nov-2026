@@ -25,7 +25,7 @@ export function toNumber(value: unknown): number | null {
   return Number.isFinite(parsed) ? parsed : null;
 }
 
-export function isHttpsUrl(value: unknown): value is string {
+export function isHttpsUrl(value: unknown): boolean {
   if (typeof value !== 'string' || value.length > 2000) return false;
   try {
     return new URL(value).protocol === 'https:';
