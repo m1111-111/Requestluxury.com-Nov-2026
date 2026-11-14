@@ -28,7 +28,7 @@ export default async function AdminLayout({ children }: { children: ReactNode })
     <div className="min-h-screen bg-ivory lg:grid lg:grid-cols-[250px_1fr]">
       <aside className="bg-obsidian text-white lg:sticky lg:top-0 lg:h-screen lg:overflow-y-auto">
         <div className="flex items-center justify-between px-4 py-5 lg:block">
-          <Logo tone="light" />
+          <Logo tone="light" compact />
           <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-white/45 lg:mt-3">Moderation backend</p>
         </div>
         <AdminNav

@@ -23,6 +23,8 @@ interface Props {
   mode: 'admin' | 'dealer';
   dealers?: Array<{ id: string; company_name: string }>;
   onClose: () => void;
+  /** Called after a successful save with the confirmation to show once the editor has closed. */
+  onSaved?: (message: string) => void;
   save: (input: ListingFormInput, intent: EditorIntent) => Promise<SaveResult>;
 }
 
@@ -65,7 +67,7 @@ function initial(listing: ManagedListing | null): ListingFormInput {
 }
 
 /** Full listing editor, used by admins in the moderation queue and by dealers in their portal. */
-export function ListingEditor({ listing, mode, dealers = [], onClose, save }: Props) {
+export function ListingEditor({ listing, mode, dealers = [], onClose, onSaved, save }: Props) {
   const [form, setForm] = useState<ListingFormInput>(() => initial(listing));
   const { pending, notice, setNotice, run } = useAdminAction();
   const isAdmin = mode === 'admin';
@@ -92,7 +94,13 @@ export function ListingEditor({ listing, mode, dealers = [], onClose, save }: Pr
 
   const submit = (intent: EditorIntent) => {
     const payload: ListingFormInput = { ...form, auction_end_time: form.auction_end_time ? new Date(form.auction_end_time).toISOString() : '' };
-    run(() => save(payload, intent), onClose);
+    run(
+      () => save(payload, intent),
+      (result) => {
+        onSaved?.(result.message ?? 'Saved.');
+        onClose();
+      },
+    );
   };
 
   const setDoc = (index: number, key: 'title' | 'kind' | 'access' | 'url', value: string) =>

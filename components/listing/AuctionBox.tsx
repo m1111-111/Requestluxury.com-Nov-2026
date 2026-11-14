@@ -144,7 +144,7 @@ export function AuctionBox({ listing, onSettle }: { listing: Listing; onSettle: 
           {bidCount} {t('card.bids')}
         </span>
         <span aria-hidden="true">·</span>
-        <span>{!hasReserve ? 'No reserve' : reserveMet ? 'Reserve met' : 'Reserve not yet met'}</span>
+        <span>{!hasReserve ? 'No reserve' : reserveMet ? 'Reserve met' : ended ? 'Reserve not met' : 'Reserve not yet met'}</span>
         {state?.my_paddle && (
           <>
             <span aria-hidden="true">·</span>

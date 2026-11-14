@@ -308,6 +308,7 @@ export function ListingsManager({ listings, dealers }: { listings: ManagedListin
           mode="admin"
           dealers={dealers}
           onClose={() => setEditing(null)}
+          onSaved={(message) => setNotice({ tone: 'ok', text: message })}
           save={saveListing}
         />
       )}

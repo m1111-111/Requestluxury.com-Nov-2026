@@ -348,6 +348,7 @@ export function DealerPortal({ dealer, listings, leads, payoutsNotice }: { deale
           listing={editing === 'new' ? null : editing}
           mode="dealer"
           onClose={() => setEditing(null)}
+          onSaved={(message) => setNotice({ tone: 'ok', text: message })}
           save={(input) => saveDealerListing(input)}
         />
       )}
