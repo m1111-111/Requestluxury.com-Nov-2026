@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { T } from '@/components/ui/T';
 import type { Listing } from '@/types';
 import { ListingCard } from './ListingCard';
@@ -12,9 +13,9 @@ export function ListingGrid({ listings, eagerCount = 0 }: { listings: Listing[];
         <p className="mx-auto mt-3 max-w-md text-sm text-stone">
           Our dealer desk can source it privately. Tell us what you are looking for and we will reply within 48 hours.
         </p>
-        <a href="/concierge/asset-sourcing" className="btn btn-dark mt-6">
+        <Link href="/concierge/asset-sourcing" className="btn btn-dark mt-6">
           Start a bespoke search
-        </a>
+        </Link>
       </div>
     );
   }

@@ -144,7 +144,7 @@ export function parseListingForm(raw: unknown): ParsedListing {
   const videoUrl = cleanText(input.video_url, 500);
   if (videoUrl && !isHttpsUrl(videoUrl)) return fail('The video link must start with https://');
 
-  let specs: Specs = {};
+  const specs: Specs = {};
   const specsText = String(input.specs ?? '').trim();
   if (specsText) {
     let parsed: unknown;

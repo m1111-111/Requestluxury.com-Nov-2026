@@ -12,7 +12,6 @@ export function isUuid(value: unknown): value is string {
 /** Trims, strips control characters and caps the length of free text from a form. */
 export function cleanText(value: unknown, max: number): string {
   if (typeof value !== 'string') return '';
-  // eslint-disable-next-line no-control-regex
   return value.replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, '').trim().slice(0, max);
 }
 
