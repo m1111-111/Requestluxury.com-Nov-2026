@@ -167,3 +167,23 @@ export function escapeHtml(value: unknown): string {
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;');
 }
+
+/** Display order for known specification keys; anything else follows alphabetically. */
+const SPEC_ORDER = [
+  'brand', 'make', 'manufacturer', 'model', 'reference', 'type', 'year', 'year_built', 'refit',
+  'bedrooms', 'bathrooms', 'interior_sqft', 'plot_sqft', 'floor', 'view', 'furnishing', 'pool', 'beach', 'parking',
+  'mileage_km', 'engine', 'engines', 'power_hp', 'transmission', 'drive', 'exterior', 'interior', 'owners', 'matching_numbers',
+  'length_m', 'beam_m', 'guests', 'cabins', 'crew', 'max_speed_kn', 'cruising_speed_kn', 'cruise_speed_kn', 'max_speed', 'range_nm', 'rig', 'hull', 'flag',
+  'total_time_hrs', 'passengers', 'programmes', 'avionics', 'connectivity', 'equipment',
+  'case_material', 'case_diameter_mm', 'movement', 'dial', 'water_resistance_m', 'box_papers', 'condition',
+  'metal', 'main_stone', 'carat_weight', 'sapphire_carats', 'diamond_carats', 'cut', 'colour', 'clarity', 'diamond_colour', 'diamond_clarity',
+  'ring_size', 'certificate', 'presentation', 'building_services', 'extras',
+];
+
+export function orderSpecs<T>(entries: Array<[string, T]>): Array<[string, T]> {
+  const rank = (key: string) => {
+    const index = SPEC_ORDER.indexOf(key);
+    return index === -1 ? SPEC_ORDER.length : index;
+  };
+  return [...entries].sort(([a], [b]) => rank(a) - rank(b) || a.localeCompare(b));
+}

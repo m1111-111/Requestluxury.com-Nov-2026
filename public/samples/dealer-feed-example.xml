@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  RequestLuxury dealer feed example.
+  Any repeating element that contains a <title> (or <name>) is read as one listing.
+  Recognised fields: title, category, description, price (with a currency attribute or a
+  <currency> element), city, country, address, permit_number, status, images/image, video_url.
+  Any other simple element is stored as a specification.
+-->
+<listings>
+  <listing>
+    <title>2022 Example Explorer Yacht 38m</title>
+    <category>yachts</category>
+    <description>Replace this item with your own listing. Describe the asset in at least 300 characters, covering condition, history, equipment and what is included in the sale, so that it earns a higher quality score.</description>
+    <price currency="EUR">11900000</price>
+    <city>Palma de Mallorca</city>
+    <country>Spain</country>
+    <address>Berth reference, shown to verified buyers only</address>
+    <images>
+      <image>https://example.com/photos/yacht-1.jpg</image>
+      <image>https://example.com/photos/yacht-2.jpg</image>
+    </images>
+    <year>2022</year>
+    <length_m>38</length_m>
+    <guests>10</guests>
+  </listing>
+</listings>

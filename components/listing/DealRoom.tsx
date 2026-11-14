@@ -116,12 +116,12 @@ export function DealRoom({ listingId, preview }: { listingId: string; preview: D
         {unlocked ? <LockOpen aria-hidden="true" className="h-6 w-6 text-gold-deep" /> : <Lock aria-hidden="true" className="h-6 w-6 text-gold-deep" />}
       </div>
 
-      <ul className="grid gap-px bg-sand sm:grid-cols-2">
+      <ul className="grid sm:grid-cols-2">
         {documents.map((document, index) => {
           const url = unlocked ? safeDocumentUrl(document.url ?? null) : null;
           const awaitingVerification = Boolean(unlocked) && !url;
           return (
-            <li key={`${document.title}-${index}`} className="relative bg-white p-5">
+            <li key={`${document.title}-${index}`} className="relative border-b border-sand bg-white p-5 sm:odd:border-e">
               <div className={`flex gap-4 ${unlocked ? '' : 'select-none'}`}>
                 <div className={`flex h-20 w-16 shrink-0 items-center justify-center border border-sand bg-ivory ${unlocked ? '' : 'blur-[3px]'}`}>
                   <FileText aria-hidden="true" className="h-7 w-7 text-gold-deep" strokeWidth={1.25} />

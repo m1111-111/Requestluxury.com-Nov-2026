@@ -10,7 +10,7 @@ import { ListingGrid } from '@/components/listings/ListingGrid';
 import { T } from '@/components/ui/T';
 import { SITE, getVertical } from '@/lib/constants';
 import { getListingBySlug, getRelatedListings, getSitemapListings } from '@/lib/data';
-import { formatSpecValue, humanizeKey, truncate } from '@/lib/format';
+import { formatSpecValue, humanizeKey, orderSpecs, truncate } from '@/lib/format';
 import { imageUrl, resolveVideo, videoPoster } from '@/lib/images';
 import { cardFacts } from '@/lib/listing-facts';
 import type { TranslationKey } from '@/lib/i18n';
@@ -60,7 +60,7 @@ export default async function ListingPage({ params }: PageProps) {
   const vertical = getVertical(listing.vertical);
   const related = await getRelatedListings(listing, 3);
   const video = resolveVideo(listing.video_url);
-  const specs = Object.entries(listing.specs ?? {}).filter(([, value]) => value !== null && value !== '');
+  const specs = orderSpecs(Object.entries(listing.specs ?? {}).filter(([, value]) => value !== null && value !== ''));
   const paragraphs = listing.description.split(/\n{2,}/).map((text) => text.trim()).filter(Boolean);
   const isDubaiResidence = listing.vertical === 'residences' && listing.city.trim().toLowerCase() === 'dubai';
   const verified = Boolean(listing.dealer?.is_verified) && !listing.is_showcase;
@@ -183,9 +183,9 @@ export default async function ListingPage({ params }: PageProps) {
               <h2 id="specs-title" className="font-serif text-3xl text-obsidian md:text-4xl">
                 <T k="detail.specs" />
               </h2>
-              <dl className="mt-6 grid gap-px border border-sand bg-sand sm:grid-cols-2 lg:grid-cols-3">
+              <dl className="mt-6 grid border-s border-t border-sand sm:grid-cols-2 lg:grid-cols-3">
                 {specs.map(([key, value]) => (
-                  <div key={key} className="bg-white px-5 py-4">
+                  <div key={key} className="border-b border-e border-sand bg-white px-5 py-4">
                     <dt className="text-[10px] font-semibold uppercase tracking-[0.16em] text-stone">{humanizeKey(key)}</dt>
                     <dd className="mt-1.5 text-[15px] font-medium text-obsidian">{formatSpecValue(key, value)}</dd>
                   </div>
