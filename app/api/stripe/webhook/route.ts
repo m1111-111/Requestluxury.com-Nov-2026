@@ -13,7 +13,7 @@ const PAYMENT_KINDS = ['showroom_deposit', 'hold_deposit', 'direct_buy', 'auctio
 type PaymentStatus = 'pending' | 'paid' | 'failed' | 'expired' | 'refunded';
 
 /**
- * Stripe webhook. Add the endpoint https://<your-domain>/api/stripe/webhook in the
+ * Stripe webhook. Add the endpoint https://requestluxury.com/api/stripe/webhook in the
  * Stripe Dashboard with these events:
  *   checkout.session.completed, checkout.session.async_payment_succeeded,
  *   checkout.session.async_payment_failed, checkout.session.expired,

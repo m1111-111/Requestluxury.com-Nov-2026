@@ -25,8 +25,8 @@ TWO MODES
                 voiceover in VOICEOVER_AND_INSTRUCTIONS.md and subtitles.srt.
                 Save as  public/videos/requestluxury-explainer.mp4
 
-Written for Blender 4.0, 4.1, 4.2 LTS and newer, including 5.x (classic EEVEE and
-EEVEE Next): every version-specific setting is guarded, so an option that does not
+Tested in Blender 4.2 LTS and Blender 5.2 LTS. Also written to run on 4.0 and 4.1
+(classic EEVEE): every version-specific setting is guarded, so an option that does not
 exist in your version is skipped instead of raising an error.
 """
 
@@ -389,7 +389,7 @@ def build_camera():
     try_set(path_data, "use_path", True)
     spline = path_data.splines.new("BEZIER")
     # One waypoint per scene boundary: start, end of scene 1, 2, 3 and the final wide shot.
-    waypoints = [(-9.5, -15.0, 2.0), (-3.5, -12.5, 3.4), (3.2, -13.5, 4.2), (0.0, -11.5, 2.6), (0.0, -19.5, 4.4)]
+    waypoints = [(-9.5, -15.0, 2.0), (-3.5, -12.5, 3.4), (2.4, -13.5, 4.2), (0.0, -11.5, 2.6), (0.0, -19.5, 4.4)]
     spline.bezier_points.add(len(waypoints) - 1)
     for point, position in zip(spline.bezier_points, waypoints):
         point.co = position
@@ -465,7 +465,7 @@ def build_lights(focus):
     key_data.size, key_data.size_y = 9.0, 4.0
     key_light = link(bpy.data.objects.new("RL Key Rim", key_data))
     key_light.location = (8.5, 7.0, 7.5)
-    try_set(key_data, "specular_factor", 0.12)       # shapes the plinths without a hot mirror patch on the floor
+    try_set(key_data, "specular_factor", 0.0)        # shapes the plinths without a mirror patch on the glossy floor
     aim(key_light, focus)
 
     fill_data = bpy.data.lights.new("RL Cool Fill", "AREA")
@@ -578,12 +578,12 @@ def scene_how_it_works(materials, serif):
         ("03", "Direct Specialist Concierge", "& Jet Charter"),
     ]
     for index, (number, line_one, line_two) in enumerate(cards):
-        x = (index - 1) * 4.8
+        x = (index - 1) * 4.6
         y = 0.6 - abs(index - 1) * 1.0
         turn = -(index - 1) * math.radians(14)
 
         card = make_box("RL Card %s" % number, (4.4, 0.07, 3.0), (x, y, 2.15), materials["glass"], bevel=0.02, rotation=(0.0, 0.0, turn))
-        presence(card, 428 + index * 28, 664, rise=2.4, duration=46)
+        presence(card, 412 + index * 24, 664, rise=2.4, duration=46)
 
         for edge_name, z in (("Top", 1.5), ("Base", -1.5)):
             accent = make_box("RL Card %s %s" % (number, edge_name), (4.4, 0.09, 0.035), (0.0, 0.0, z), materials["gold"])
@@ -639,21 +639,21 @@ def setup_render():
     eevee = getattr(scene, "eevee", None)
     try_set(eevee, "taa_render_samples", RENDER_SAMPLES)
     try_set(eevee, "taa_samples", 16)
-    # Reflections on the obsidian floor.
-    try_set(eevee, "use_ssr", True)                    # EEVEE 4.0 / 4.1
-    try_set(eevee, "use_ssr_refraction", True)
-    try_set(eevee, "ssr_quality", 0.5)
-    try_set(eevee, "use_gtao", True)
-    try_set(eevee, "use_soft_shadows", True)
-    try_set(eevee, "use_raytracing", True)             # EEVEE Next 4.2+
-    try_set(getattr(eevee, "ray_tracing_options", None), "resolution_scale", "2")
-    # Bloom: a property of classic EEVEE; EEVEE Next gets a compositor Glare node below.
-    has_bloom = try_set(eevee, "use_bloom", True)
-    if has_bloom:
+    # Floor reflections and glow. Blender 4.2 still lists the classic EEVEE switches, but
+    # touching them there turns ray tracing off, so each generation gets only its own settings.
+    if bpy.app.version < (4, 2, 0):                    # classic EEVEE (4.0 / 4.1)
+        try_set(eevee, "use_ssr", True)
+        try_set(eevee, "use_ssr_refraction", True)
+        try_set(eevee, "ssr_quality", 0.5)
+        try_set(eevee, "use_gtao", True)
+        try_set(eevee, "use_soft_shadows", True)
+        try_set(eevee, "use_bloom", True)
         try_set(eevee, "bloom_threshold", 0.9)
         try_set(eevee, "bloom_intensity", 0.07)
         try_set(eevee, "bloom_radius", 6.0)
-    else:
+    else:                                              # EEVEE Next (4.2 and newer, including 5.x)
+        try_set(eevee, "use_raytracing", True)
+        try_set(getattr(eevee, "ray_tracing_options", None), "resolution_scale", "2")
         setup_glare(scene)
 
     view = scene.view_settings
@@ -708,7 +708,7 @@ def setup_glare(scene):
         try_set(glare, "quality", "HIGH")
         try_set(glare, "threshold", 1.0)
         try_set(glare, "size", 7)
-        try_set(glare, "mix", -0.6)
+        try_set(glare, "mix", -0.8)
         set_input(glare, ["Type"], "Bloom")
         set_input(glare, ["Quality"], "High")
         set_input(glare, ["Threshold"], 1.0)

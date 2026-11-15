@@ -25,7 +25,8 @@ Both are 1920 × 1080 at 30 frames per second, H.264 in an MP4 file.
 ## Part 1 — Make the 30-second hero film
 
 1. Install **Blender 4.2 LTS or newer** from [blender.org/download](https://www.blender.org/download/)
-   (free). Blender 4.0, 4.1 and 5.x also work.
+   (free). The script was tested in Blender 4.2 LTS and 5.2 LTS. It is also written to
+   run in 4.0 and 4.1, which were not tested.
 2. Open Blender. Choose **File → Save As** and save the empty file anywhere, for
    example `requestluxury.blend` in a new folder. The video will be written beside it.
 3. Click the **Scripting** tab at the top of the window.
