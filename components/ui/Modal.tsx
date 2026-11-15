@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, type ReactNode } from 'react';
+import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 
 export function Modal({
@@ -37,12 +38,14 @@ export function Modal({
     };
   }, [open, onClose]);
 
-  if (!open) return null;
+  if (!open || typeof document === 'undefined') return null;
 
   const width = size === 'xl' ? 'max-w-6xl' : size === 'lg' ? 'max-w-3xl' : 'max-w-xl';
   const surface = tone === 'dark' ? 'bg-obsidian text-white border-white/15' : 'bg-alabaster text-charcoal border-sand';
 
-  return (
+  // Rendered at the end of <body>: a modal opened from inside an animated or transformed
+  // section would otherwise be positioned against that section instead of the viewport.
+  return createPortal(
     <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center sm:p-6">
       <button type="button" aria-label="Close" onClick={onClose} className="absolute inset-0 cursor-default bg-obsidian/75 backdrop-blur-sm" />
       <div
@@ -61,6 +64,7 @@ export function Modal({
         </div>
         <div className="p-6">{children}</div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
