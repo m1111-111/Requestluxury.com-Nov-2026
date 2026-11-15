@@ -15,6 +15,8 @@ HOW TO USE (command line, no interface)
     blender -b -P generate_requestluxury_video.py -- --render
     blender -b -P generate_requestluxury_video.py -- --mode EXPLAINER --render
     blender -b -P generate_requestluxury_video.py -- --still 120        (one PNG preview)
+    blender -b -P generate_requestluxury_video.py -- --frames 1 90 --render   (first 3 seconds only)
+    Other options: --percent 50 (half-size test), --samples 16, --output /path/to/folder/
 
 TWO MODES
     HERO        900 frames, 30 seconds, starts and ends on black so it loops
@@ -23,7 +25,7 @@ TWO MODES
                 voiceover in VOICEOVER_AND_INSTRUCTIONS.md and subtitles.srt.
                 Save as  public/videos/requestluxury-explainer.mp4
 
-Tested with Blender 4.2 LTS. Written to run on 4.0, 4.1 and 4.2+ (EEVEE and
+Written for Blender 4.0, 4.1, 4.2 LTS and newer, including 5.x (classic EEVEE and
 EEVEE Next): every version-specific setting is guarded, so an option that does not
 exist in your version is skipped instead of raising an error.
 """
@@ -56,6 +58,7 @@ HERO_FRAMES = 900
 # Command-line options (everything after "--")
 # ------------------------------------------------------------------------------
 STILL_FRAME = None
+FRAME_RANGE = None
 if "--" in sys.argv:
     _args = sys.argv[sys.argv.index("--") + 1:]
     for _i, _arg in enumerate(_args):
@@ -72,6 +75,8 @@ if "--" in sys.argv:
             RESOLUTION_PERCENT = int(_next)
         elif _arg == "--samples" and _next:
             RENDER_SAMPLES = int(_next)
+        elif _arg == "--frames" and _i + 2 < len(_args):
+            FRAME_RANGE = (int(_args[_i + 1]), int(_args[_i + 2]))
 
 MODE = "EXPLAINER" if MODE == "EXPLAINER" else "HERO"
 TIME_SCALE = 2 if MODE == "EXPLAINER" else 1
@@ -121,6 +126,13 @@ def try_set(target, attribute, value):
         return True
     except (TypeError, ValueError, AttributeError):
         return False
+
+
+def enable_nodes(block):
+    """Turns on shader nodes. From Blender 5.0 they are always on and the switch is deprecated."""
+    if bpy.app.version < (5, 0, 0):
+        try_set(block, "use_nodes", True)
+    return getattr(block, "node_tree", None)
 
 
 def clean_scene():
@@ -176,7 +188,7 @@ def presence(obj, start, end, rise=1.0, duration=40):
 # ------------------------------------------------------------------------------
 def principled(name):
     material = bpy.data.materials.new(name)
-    material.use_nodes = True
+    enable_nodes(material)
     node = material.node_tree.nodes.get("Principled BSDF")
     if node is None:
         node = material.node_tree.nodes.new("ShaderNodeBsdfPrincipled")
@@ -202,6 +214,9 @@ def material_gold():
     set_input(node, ["Coat Weight", "Clearcoat"], 0.15)
     set_input(node, ["Coat Roughness", "Clearcoat Roughness"], 0.1)
     set_input(node, ["Anisotropic"], 0.35)
+    # A whisper of self-illumination keeps lettering legible where it falls into shadow.
+    set_input(node, ["Emission Color", "Emission"], color(GOLD))
+    set_input(node, ["Emission Strength"], 0.14)
     return material
 
 
@@ -329,7 +344,9 @@ def build_world():
     """Deep matte obsidian with a soft vignette: slightly lifted at the centre of frame."""
     world = bpy.data.worlds.new("RL Obsidian World")
     bpy.context.scene.world = world
-    world.use_nodes = True
+    if enable_nodes(world) is None:
+        try_set(world, "color", color("#08080A")[:3])
+        return
     nodes, links = world.node_tree.nodes, world.node_tree.links
     nodes.clear()
     coordinates = nodes.new("ShaderNodeTexCoord")
@@ -361,8 +378,8 @@ def build_camera():
 
     focus = link(bpy.data.objects.new("RL Focus", None))
     focus.empty_display_size = 0.4
-    for frame, target in ((1, (0.0, 0.0, 2.1)), (180, (0.0, 0.0, 2.0)), (300, (0.0, 0.0, 1.5)),
-                          (420, (0.0, 0.0, 1.5)), (540, (0.0, 0.0, 1.9)), (660, (0.0, 0.0, 1.9)),
+    for frame, target in ((1, (0.0, 0.0, 2.1)), (180, (0.0, 0.0, 2.0)), (300, (0.0, 0.0, 1.9)),
+                          (420, (0.0, 0.0, 1.9)), (540, (0.0, 0.0, 2.1)), (660, (0.0, 0.0, 2.0)),
                           (780, (0.0, 0.0, 1.7)), (900, (0.0, 0.0, 1.7))):
         key(focus, "location", F(frame), target)
 
@@ -371,7 +388,8 @@ def build_camera():
     path_data.resolution_u = 32
     try_set(path_data, "use_path", True)
     spline = path_data.splines.new("BEZIER")
-    waypoints = [(-9.5, -15.0, 2.0), (-3.5, -12.0, 2.5), (4.5, -12.5, 3.1), (0.0, -10.5, 2.3), (0.0, -19.5, 4.4)]
+    # One waypoint per scene boundary: start, end of scene 1, 2, 3 and the final wide shot.
+    waypoints = [(-9.5, -15.0, 2.0), (-3.5, -12.5, 3.4), (3.2, -13.5, 4.2), (0.0, -11.5, 2.6), (0.0, -19.5, 4.4)]
     spline.bezier_points.add(len(waypoints) - 1)
     for point, position in zip(spline.bezier_points, waypoints):
         point.co = position
@@ -386,13 +404,23 @@ def build_camera():
     camera_data.sensor_width = 36
     camera = link(bpy.data.objects.new("RL Camera", camera_data))
     scene.camera = camera
+    # A wider lens for the two ensemble scenes keeps all six plinths and all three cards in frame.
+    for frame, lens in ((1, 38.0), (165, 38.0), (235, 26.0), (640, 26.0), (705, 36.0), (900, 36.0)):
+        camera_data.lens = lens
+        camera_data.keyframe_insert("lens", frame=F(frame))
 
     follow = camera.constraints.new("FOLLOW_PATH")
     follow.target = path
     follow.use_fixed_location = True
     follow.use_curve_follow = False
-    # Position along the path at each scene boundary; Bezier keys keep the glide smooth.
-    for frame, factor in ((1, 0.0), (180, 0.24), (420, 0.50), (660, 0.74), (900, 1.0)):
+    # The camera reaches each waypoint on its scene boundary. Positions along the path are
+    # measured from the waypoints themselves; Bezier keys keep the glide smooth.
+    lengths = [math.dist(a, b) for a, b in zip(waypoints, waypoints[1:])]
+    travelled, factors = 0.0, [0.0]
+    for length in lengths:
+        travelled += length
+        factors.append(travelled / sum(lengths))
+    for frame, factor in zip((1, 180, 420, 660, 900), factors):
         follow.offset_factor = factor
         follow.keyframe_insert("offset_factor", frame=F(frame))
 
@@ -437,6 +465,7 @@ def build_lights(focus):
     key_data.size, key_data.size_y = 9.0, 4.0
     key_light = link(bpy.data.objects.new("RL Key Rim", key_data))
     key_light.location = (8.5, 7.0, 7.5)
+    try_set(key_data, "specular_factor", 0.12)       # shapes the plinths without a hot mirror patch on the floor
     aim(key_light, focus)
 
     fill_data = bpy.data.lights.new("RL Cool Fill", "AREA")
@@ -449,15 +478,16 @@ def build_lights(focus):
     aim(fill_light, focus)
 
     front_data = bpy.data.lights.new("RL Soft Front", "AREA")
-    front_data.energy = 650
+    front_data.energy = 1700
     front_data.color = (1.0, 0.95, 0.88)
-    front_data.size = 8.0
+    front_data.shape = "RECTANGLE"
+    front_data.size, front_data.size_y = 16.0, 7.0
     front_light = link(bpy.data.objects.new("RL Soft Front", front_data))
-    front_light.location = (0.0, -11.0, 6.5)
+    front_light.location = (0.0, -13.0, 7.5)
     aim(front_light, focus)
 
     spot_data = bpy.data.lights.new("RL Top Sweep", "SPOT")
-    spot_data.energy = 5200
+    spot_data.energy = 3600
     spot_data.color = (1.0, 0.9, 0.74)
     spot_data.spot_size = math.radians(48)
     spot_data.spot_blend = 0.85
@@ -487,8 +517,8 @@ def scene_monolith_reveal(materials, serif):
             key(slab, "location", F(frame), base + lift * (1 if index % 2 else -1), index=2)
         key(slab, "scale", F(1), (1.0, 1.0, 1.0))
         key(slab, "scale", F(400), (1.0, 1.0, 1.0))
-        key(slab, "scale", F(440), (1.0, 1.0, 0.0001))
-        key(slab, "scale", F(660), (1.0, 1.0, 0.0001))
+        key(slab, "scale", F(440), (0.0001, 0.0001, 0.0001))
+        key(slab, "scale", F(660), (0.0001, 0.0001, 0.0001))
         key(slab, "scale", F(710), (1.0, 1.0, 1.0))
 
     emblem = make_text("RL Emblem R", "R", 2.6, materials["gold"], (0.0, 0.0, 3.5), extrude=0.22, bevel=0.03, font=serif)
@@ -506,15 +536,16 @@ def scene_monolith_reveal(materials, serif):
 def scene_six_pillars(materials, serif):
     """Frames 181-420: six plinths in an arc light up one after another."""
     names = ["RESIDENCES", "SUPERCARS", "YACHTS", "AVIATION", "HOROLOGY", "JEWELRY"]
-    radius, spread = 9.5, math.radians(104)
+    pitch = 2.45
     for index, name in enumerate(names):
-        angle = -spread / 2 + spread * index / (len(names) - 1)
-        x = radius * math.sin(angle)
-        y = radius * (1 - math.cos(angle)) * 0.9 + 1.2
-        height = 1.5 + 0.45 * (1 - abs(index - 2.5) / 2.5)
-        facing = (0.0, 0.0, -angle * 0.55)
+        offset = index - (len(names) - 1) / 2.0
+        x = offset * pitch
+        y = 1.4 - 0.26 * offset * offset          # outer plinths step towards the camera
+        height = 2.0 + 0.6 * (1 - abs(offset) / 2.5)
+        turn = math.atan2(-x, 13.0 + y)           # each plinth and label faces the camera path
+        facing = (0.0, 0.0, turn)
 
-        plinth = make_box("RL Plinth %s" % name.title(), (1.7, 1.7, height), (x, y, height / 2),
+        plinth = make_box("RL Plinth %s" % name.title(), (1.5, 1.5, height), (x, y, height / 2),
                           materials["alabaster"], bevel=0.035, rotation=facing)
         presence(plinth, 184 + index * 10, 424, rise=height + 0.3, duration=44)
 
@@ -530,12 +561,12 @@ def scene_six_pillars(materials, serif):
             for frame, value in ((lit - 14, 0.0), (lit, 9.0), (lit + 26, 3.2), (400, 3.2), (420, 0.0)):
                 strength.default_value = value
                 strength.keyframe_insert("default_value", frame=F(frame))
-        inlay = make_box("RL Inlay %s" % name.title(), (1.34, 1.34, 0.05), (0.0, 0.0, height / 2 + 0.02), inlay_material, bevel=0.01)
+        inlay = make_box("RL Inlay %s" % name.title(), (1.16, 1.16, 0.05), (0.0, 0.0, height / 2 + 0.02), inlay_material, bevel=0.01)
         inlay.parent = plinth
 
-        label = make_text("RL Label %s" % name.title(), name, 0.30, materials["gold"], (x, y - 0.95, height + 0.62),
-                          extrude=0.035, bevel=0.005, font=serif, spacing=1.28,
-                          rotation=(math.radians(90), 0.0, -angle * 0.55))
+        label = make_text("RL Label %s" % name.title(), name, 0.34, materials["gold"], (x, y - 0.8, height + 0.78),
+                          extrude=0.04, bevel=0.005, font=serif, spacing=1.18,
+                          rotation=(math.radians(90), 0.0, turn))
         presence(label, lit - 8, 426, rise=0.5, duration=30)
 
 
@@ -547,38 +578,38 @@ def scene_how_it_works(materials, serif):
         ("03", "Direct Specialist Concierge", "& Jet Charter"),
     ]
     for index, (number, line_one, line_two) in enumerate(cards):
-        x = (index - 1) * 4.5
-        y = 0.6 - abs(index - 1) * 0.9
-        turn = -(index - 1) * math.radians(13)
+        x = (index - 1) * 4.8
+        y = 0.6 - abs(index - 1) * 1.0
+        turn = -(index - 1) * math.radians(14)
 
-        card = make_box("RL Card %s" % number, (3.9, 0.07, 2.6), (x, y, 1.95), materials["glass"], bevel=0.02, rotation=(0.0, 0.0, turn))
+        card = make_box("RL Card %s" % number, (4.4, 0.07, 3.0), (x, y, 2.15), materials["glass"], bevel=0.02, rotation=(0.0, 0.0, turn))
         presence(card, 428 + index * 28, 664, rise=2.4, duration=46)
 
-        for edge_name, z in (("Top", 1.3), ("Base", -1.3)):
-            accent = make_box("RL Card %s %s" % (number, edge_name), (3.9, 0.09, 0.035), (0.0, 0.0, z), materials["gold"])
+        for edge_name, z in (("Top", 1.5), ("Base", -1.5)):
+            accent = make_box("RL Card %s %s" % (number, edge_name), (4.4, 0.09, 0.035), (0.0, 0.0, z), materials["gold"])
             accent.parent = card
 
-        numeral = make_text("RL Card %s Numeral" % number, number + ".", 0.62, materials["gold"], (-1.5, -0.07, 0.62),
+        numeral = make_text("RL Card %s Numeral" % number, number + ".", 0.72, materials["gold"], (-1.8, -0.07, 0.72),
                             extrude=0.05, bevel=0.008, font=serif, rotation=(math.radians(90), 0.0, 0.0), align="LEFT")
         numeral.parent = card
         for row, text in enumerate((line_one, line_two)):
-            line = make_text("RL Card %s Line %d" % (number, row + 1), text, 0.235, materials["label"],
-                             (-1.5, -0.07, -0.12 - row * 0.42), extrude=0.004, bevel=0.0,
+            line = make_text("RL Card %s Line %d" % (number, row + 1), text, 0.265, materials["label"],
+                             (-1.8, -0.07, -0.14 - row * 0.48), extrude=0.004, bevel=0.0,
                              rotation=(math.radians(90), 0.0, 0.0), spacing=1.06, align="LEFT")
             line.parent = card
 
 
 def scene_call_to_action(materials, serif):
     """Frames 661-900: the wide closing shot, then a fade to black for the loop."""
-    wordmark = make_text("RL Wordmark", "REQUESTLUXURY.COM", 1.25, materials["gold"], (0.0, 0.0, 2.25),
-                         extrude=0.14, bevel=0.016, font=serif, spacing=1.22)
+    wordmark = make_text("RL Wordmark", "REQUESTLUXURY.COM", 1.08, materials["gold"], (0.0, 0.0, 2.2),
+                         extrude=0.13, bevel=0.015, font=serif, spacing=1.22)
     presence(wordmark, 668, 905, rise=2.6, duration=58)
 
-    rule = make_box("RL Gold Rule", (7.2, 0.03, 0.022), (0.0, -0.2, 1.22), materials["glow_gold"])
+    rule = make_box("RL Gold Rule", (6.4, 0.03, 0.022), (0.0, -0.2, 1.3), materials["glow_gold"])
     presence(rule, 706, 905, rise=0.3, duration=36)
 
-    cities = make_text("RL Cities", "LONDON  \u2022  GENEVA  \u2022  DUBAI  \u2022  MONACO  \u2022  NEW YORK", 0.32,
-                       materials["label"], (0.0, -0.4, 0.74), extrude=0.004, bevel=0.0, spacing=1.3)
+    cities = make_text("RL Cities", "LONDON  \u2022  GENEVA  \u2022  DUBAI  \u2022  MONACO  \u2022  NEW YORK", 0.3,
+                       materials["label"], (0.0, -0.4, 0.84), extrude=0.004, bevel=0.0, spacing=1.3)
     presence(cities, 722, 905, rise=0.35, duration=40)
 
 
@@ -599,6 +630,9 @@ def setup_render():
     render.fps = FPS
     scene.frame_start = 1
     scene.frame_end = TOTAL_FRAMES
+    if FRAME_RANGE is not None:
+        scene.frame_start = max(1, min(FRAME_RANGE))
+        scene.frame_end = min(TOTAL_FRAMES, max(FRAME_RANGE))
     render.film_transparent = False
     try_set(render, "use_motion_blur", False)
 
@@ -656,25 +690,33 @@ def setup_glare(scene):
     """Compositor bloom for EEVEE Next. Entirely optional: if the compositor API of this
     Blender version differs, the film simply renders without the glow."""
     try:
-        scene.use_nodes = True
-        tree = scene.node_tree
-        if tree is None:
-            return
-        tree.nodes.clear()
+        if hasattr(scene, "compositing_node_group"):                 # Blender 5.x
+            tree = bpy.data.node_groups.new("RL Compositor", "CompositorNodeTree")
+            tree.interface.new_socket(name="Image", in_out="OUTPUT", socket_type="NodeSocketColor")
+            output = tree.nodes.new("NodeGroupOutput")
+            scene.compositing_node_group = tree
+        else:                                                         # Blender 4.x
+            scene.use_nodes = True
+            tree = scene.node_tree
+            tree.nodes.clear()
+            output = tree.nodes.new("CompositorNodeComposite")
         layers = tree.nodes.new("CompositorNodeRLayers")
         glare = tree.nodes.new("CompositorNodeGlare")
-        composite = tree.nodes.new("CompositorNodeComposite")
+        # 4.2 / 4.3 use node properties; 4.4+ and 5.x use input sockets. Both are attempted.
         if not try_set(glare, "glare_type", "BLOOM"):
             try_set(glare, "glare_type", "FOG_GLOW")
         try_set(glare, "quality", "HIGH")
-        try_set(glare, "threshold", 1.1)
+        try_set(glare, "threshold", 1.0)
         try_set(glare, "size", 7)
-        try_set(glare, "mix", -0.35)
-        set_input(glare, ["Threshold"], 1.1)           # Blender 4.4+ exposes these as sockets
-        set_input(glare, ["Strength"], 0.55)
-        set_input(glare, ["Size"], 0.55)
+        try_set(glare, "mix", -0.6)
+        set_input(glare, ["Type"], "Bloom")
+        set_input(glare, ["Quality"], "High")
+        set_input(glare, ["Threshold"], 1.0)
+        set_input(glare, ["Strength"], 0.35)
+        set_input(glare, ["Size"], 0.5)
         tree.links.new(layers.outputs["Image"], glare.inputs["Image"])
-        tree.links.new(glare.outputs["Image"], composite.inputs["Image"])
+        tree.links.new(glare.outputs["Image"], output.inputs[0])
+        try_set(scene.render, "use_compositing", True)
     except Exception as error:  # noqa: BLE001 - any compositor difference must never stop the build
         print("[RequestLuxury] Bloom skipped on this Blender version: %s" % error)
 

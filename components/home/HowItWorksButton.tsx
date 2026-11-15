@@ -51,7 +51,9 @@ export function HowItWorksButton({ videoSrc }: { videoSrc: string }) {
 
       <Modal open={open} onClose={() => setOpen(false)} title="How RequestLuxury works" size="xl" tone="dark">
         {videoSrc ? (
-          <video src={videoSrc} controls autoPlay playsInline className="aspect-video w-full bg-black" />
+          <video src={videoSrc} controls autoPlay playsInline className="aspect-video w-full bg-black">
+            <track kind="captions" src="/videos/requestluxury-explainer.vtt" srcLang="en" label="English" default />
+          </video>
         ) : (
           <div className="grid gap-8 lg:grid-cols-[1fr_1.1fr]">
             <ol className="space-y-2">

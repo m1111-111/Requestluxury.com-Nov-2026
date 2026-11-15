@@ -13,5 +13,8 @@ commit them and redeploy for them to appear.
 
 Generate both with `blender/generate_requestluxury_video.py`; see
 `blender/VOICEOVER_AND_INSTRUCTIONS.md`. Keep each file under about 15 MB for a fast
-first load (the script's default settings produce roughly 6–10 MB), or host them on
-Cloudinary and set `NEXT_PUBLIC_HERO_VIDEO` / `NEXT_PUBLIC_EXPLAINER_VIDEO` instead.
+first load, or host them on Cloudinary and set `NEXT_PUBLIC_HERO_VIDEO` /
+`NEXT_PUBLIC_EXPLAINER_VIDEO` to their addresses instead.
+
+`requestluxury-explainer.vtt` holds the English captions for the explainer (the same
+text and timings as `blender/subtitles.srt`). The player loads it automatically.
